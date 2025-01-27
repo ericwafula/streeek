@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import org.koin.dsl.module
 
@@ -38,6 +39,42 @@ internal val FeedModule =
             )
         }
     }
+
+enum class MonthAction {
+    PREVIOUS,
+    NEXT,
+}
+
+enum class StreakPosition {
+    FIRST,
+    MIDDLE,
+    LAST,
+    ALONE,
+}
+
+fun LocalDate.asStreakPosition(list: List<LocalDate>): StreakPosition? {
+    val sorted = list.sorted()
+    val index = sorted.indexOf(this)
+    if (index == -1) return null
+    val previousDate = sorted.getOrNull(index - 1)
+    val hasPreviousDay =
+        when (previousDate) {
+            null -> false
+            else -> dayOfYear.minus(previousDate.dayOfYear) == 1
+        }
+    val nextDate = sorted.getOrNull(index + 1)
+    val hasNextDay =
+        when (nextDate) {
+            null -> false
+            else -> nextDate.dayOfYear.minus(this.dayOfYear) == 1
+        }
+    return when {
+        hasPreviousDay && hasNextDay -> StreakPosition.MIDDLE
+        hasPreviousDay -> StreakPosition.LAST
+        hasNextDay -> StreakPosition.FIRST
+        else -> StreakPosition.ALONE
+    }
+}
 
 data class FeedScreenState(
     val isSyncing: Boolean = false,
