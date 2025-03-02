@@ -34,6 +34,8 @@ object LandingScreen : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
 
+        val intentDestinations = getNavigationDestinationFromURI()
+        val onBoardingScreen = rememberScreen(SharedScreen.OnBoarding)
         val authenticationScreen = rememberScreen(SharedScreen.Authentication)
         val setupScreen = rememberScreen(SharedScreen.Setup)
         val tabsScreen = rememberScreen(SharedScreen.Tabs)
@@ -42,11 +44,16 @@ object LandingScreen : Screen {
         val state by screenModel.state.collectAsStateWithLifecycle()
 
         LandingScreenContent(state = state) { destination ->
-            when (destination) {
-                LandingScreenDestination.CURRENT -> Unit
-                LandingScreenDestination.AUTHENTICATE -> navigator.replace(authenticationScreen)
-                LandingScreenDestination.TABS -> navigator.replace(tabsScreen)
-                LandingScreenDestination.SETUP -> navigator.replace(setupScreen)
+            if (intentDestinations.isNotEmpty() && destination != LandingScreenDestination.AUTHENTICATE) {
+                navigator.replaceAll(intentDestinations)
+            } else {
+                when (destination) {
+                    LandingScreenDestination.CURRENT -> Unit
+                    LandingScreenDestination.AUTHENTICATE -> navigator.replace(authenticationScreen)
+                    LandingScreenDestination.TABS -> navigator.replace(tabsScreen)
+                    LandingScreenDestination.SETUP -> navigator.replace(setupScreen)
+                    LandingScreenDestination.ONBOARDING -> navigator.replace(onBoardingScreen)
+                }
             }
         }
     }
@@ -76,7 +83,10 @@ fun LandingScreenContent(
                 tint = MaterialTheme.colorScheme.onBackground,
             )
             LinearProgressIndicator(
-                modifier = Modifier.padding(16.dp).width(75.dp),
+                modifier =
+                    Modifier
+                        .padding(16.dp)
+                        .width(75.dp),
                 color = MaterialTheme.colorScheme.onBackground,
             )
         }

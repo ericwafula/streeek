@@ -24,7 +24,6 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import org.koin.dsl.module
 
@@ -121,7 +120,7 @@ class FeedScreenModel(
         }
     }
 
-    private fun checkNotificationPermission() {
+    fun checkNotificationPermission() {
         val granted =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 context.permissionIsGranted(permission = Manifest.permission.POST_NOTIFICATIONS)
@@ -167,5 +166,10 @@ class FeedScreenModel(
 
     fun onClickToggleMonthView() {
         mutableState.update { it.copy(isMonthView = it.isMonthView.not()) }
+    }
+
+    // Dismiss Dialog and Prevent asking permission for app lifecycle , till killed.
+    fun onDismissNotificationModal() {
+        mutableState.update { it.copy(isPermissionGranted = true) }
     }
 }

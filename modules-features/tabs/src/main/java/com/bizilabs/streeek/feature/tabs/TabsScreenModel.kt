@@ -19,12 +19,14 @@ import com.bizilabs.streeek.feature.tabs.screens.feed.FeedModule
 import com.bizilabs.streeek.feature.tabs.screens.leaderboard.LeaderboardModule
 import com.bizilabs.streeek.feature.tabs.screens.notifications.ModuleNotifications
 import com.bizilabs.streeek.feature.tabs.screens.teams.TeamsListModule
+import com.bizilabs.streeek.lib.domain.helpers.tryOrNull
 import com.bizilabs.streeek.lib.domain.workers.startPeriodicAccountSyncWork
 import com.bizilabs.streeek.lib.domain.workers.startPeriodicDailySyncContributionsWork
 import com.bizilabs.streeek.lib.domain.workers.startPeriodicLeaderboardSyncWork
 import com.bizilabs.streeek.lib.domain.workers.startPeriodicLevelsSyncWork
 import com.bizilabs.streeek.lib.domain.workers.startPeriodicTeamsSyncWork
 import com.bizilabs.streeek.lib.domain.workers.startSaveFCMTokenWork
+import com.bizilabs.streeek.lib.domain.workers.stopReminderWork
 import kotlinx.coroutines.flow.update
 import org.koin.dsl.module
 
@@ -43,35 +45,36 @@ val FeatureTabsModule =
     }
 
 enum class Tabs {
-    LEADERBOARD,
+    LEADERBOARDS,
     TEAMS,
     FEED,
-    ACHIEVEMENTS,
     NOTIFICATIONS,
+    ACHIEVEMENTS,
     ;
 
     val icon: Pair<ImageVector, ImageVector>
         get() =
             when (this) {
                 FEED -> Pair(Icons.Outlined.Explore, Icons.Rounded.Explore)
-                LEADERBOARD -> Pair(Icons.Outlined.Leaderboard, Icons.Rounded.Leaderboard)
+                LEADERBOARDS -> Pair(Icons.Outlined.Leaderboard, Icons.Rounded.Leaderboard)
                 TEAMS -> Pair(Icons.Outlined.PeopleAlt, Icons.Rounded.PeopleAlt)
-                ACHIEVEMENTS -> Pair(Icons.Outlined.EmojiEvents, Icons.Rounded.EmojiEvents)
                 NOTIFICATIONS -> Pair(Icons.Outlined.Notifications, Icons.Rounded.Notifications)
+                ACHIEVEMENTS -> Pair(Icons.Outlined.EmojiEvents, Icons.Rounded.EmojiEvents)
             }
 
     val label: String
         get() =
             when (this) {
                 FEED -> "Feed"
-                LEADERBOARD -> "Leaderboard"
+                LEADERBOARDS -> "Leaderboard"
                 TEAMS -> "Teams"
-                ACHIEVEMENTS -> "Achievements"
                 NOTIFICATIONS -> "Notifications"
+                ACHIEVEMENTS -> "Achievements"
             }
 }
 
 data class TabsScreenState(
+    val hasSetTabFromNavigation: Boolean = false,
     val tab: Tabs = Tabs.FEED,
     val tabs: List<Tabs> = Tabs.entries.toList(),
 )
@@ -85,6 +88,7 @@ class TabsScreenModel(
 
     private fun startWorkers() {
         with(context) {
+            stopReminderWork()
             startSaveFCMTokenWork()
             startPeriodicTeamsSyncWork()
             startPeriodicLevelsSyncWork()
@@ -92,6 +96,12 @@ class TabsScreenModel(
             startPeriodicLeaderboardSyncWork()
             startPeriodicDailySyncContributionsWork()
         }
+    }
+
+    fun setTabFromNavigation(value: String) {
+        val tab = tryOrNull { Tabs.valueOf(value.uppercase()) } ?: return
+        if (state.value.hasSetTabFromNavigation) return
+        mutableState.update { it.copy(hasSetTabFromNavigation = true, tab = tab) }
     }
 
     fun onValueChangeTab(tab: Tabs) {

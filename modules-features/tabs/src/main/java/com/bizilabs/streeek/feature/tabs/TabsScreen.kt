@@ -30,22 +30,19 @@ import com.bizilabs.streeek.feature.tabs.screens.leaderboard.LeaderboardListScre
 import com.bizilabs.streeek.feature.tabs.screens.notifications.NotificationsScreen
 import com.bizilabs.streeek.feature.tabs.screens.teams.TeamsListScreen
 import com.bizilabs.streeek.lib.common.navigation.SharedScreen
-import com.bizilabs.streeek.lib.design.helpers.SetupNavigationBarColor
-import com.bizilabs.streeek.lib.design.helpers.SetupStatusBarColor
 
 val featureTabs =
     screenModule {
-        register<SharedScreen.Tabs> { TabsScreen }
+        register<SharedScreen.Tabs> { params -> TabsScreen(tab = params.tab) }
+        register<SharedScreen.Tabs.Companion> { params -> TabsScreen(tab = params.tab) }
     }
 
-object TabsScreen : Screen {
+open class TabsScreen(val tab: String) : Screen {
     @Composable
     override fun Content() {
-        SetupNavigationBarColor(color = MaterialTheme.colorScheme.surface)
-        SetupStatusBarColor(color = MaterialTheme.colorScheme.surface)
-
         val activity = LocalContext.current as Activity
         val screenModel: TabsScreenModel = getScreenModel()
+        screenModel.setTabFromNavigation(value = tab)
         val state by screenModel.state.collectAsStateWithLifecycle()
 
         BackHandler(enabled = true) {
@@ -111,10 +108,16 @@ fun TabsScreenContent(
             val screen =
                 when (tab) {
                     Tabs.FEED -> FeedScreen
-                    Tabs.LEADERBOARD -> LeaderboardListScreen
+                    Tabs.LEADERBOARDS ->
+                        LeaderboardListScreen(
+                            onNavigateBack = {
+                                onValueChangeTab(Tabs.FEED)
+                            },
+                        )
+
                     Tabs.TEAMS -> TeamsListScreen
-                    Tabs.ACHIEVEMENTS -> AchievementsScreen
                     Tabs.NOTIFICATIONS -> NotificationsScreen
+                    Tabs.ACHIEVEMENTS -> AchievementsScreen
                 }
             screen.Content()
         }

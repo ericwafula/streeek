@@ -30,6 +30,8 @@ dependencies {
     implementation(projects.modulesFeatures.join)
     implementation(projects.modulesFeatures.notifications)
     implementation(projects.modulesFeatures.services)
+    implementation(projects.modulesFeatures.onboarding)
+    implementation(projects.modulesFeatures.reminders)
 
     // splash screen
     implementation(libs.androidx.core.splashscreen)
@@ -40,4 +42,7 @@ dependencies {
     // firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.bundles.firebase)
+
+    // in app reviews
+    implementation(projects.modulesFeatures.reviews)
 }

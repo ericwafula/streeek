@@ -9,10 +9,12 @@ import com.bizilabs.streeek.lib.data.repositories.LeaderboardRepositoryImpl
 import com.bizilabs.streeek.lib.data.repositories.LevelRepositoryImpl
 import com.bizilabs.streeek.lib.data.repositories.NotificationRepositoryImpl
 import com.bizilabs.streeek.lib.data.repositories.PreferenceRepositoryImpl
-import com.bizilabs.streeek.lib.data.repositories.TeamInvitationRepositoryImpl
+import com.bizilabs.streeek.lib.data.repositories.ReminderRepositoryImpl
+import com.bizilabs.streeek.lib.data.repositories.TeamInvitationCodeRepositoryImpl
 import com.bizilabs.streeek.lib.data.repositories.TeamRepositoryImpl
 import com.bizilabs.streeek.lib.data.repositories.UserRepositoryImpl
 import com.bizilabs.streeek.lib.data.repositories.VersionRepositoryImpl
+import com.bizilabs.streeek.lib.data.repositories.team.TeamMemberInvitationRepositoryImpl
 import com.bizilabs.streeek.lib.data.repositories.team.TeamRequestRepositoryImpl
 import com.bizilabs.streeek.lib.domain.monitors.NetworkMonitor
 import com.bizilabs.streeek.lib.domain.repositories.AccountRepository
@@ -25,10 +27,12 @@ import com.bizilabs.streeek.lib.domain.repositories.LevelRepository
 import com.bizilabs.streeek.lib.domain.repositories.NotificationRepository
 import com.bizilabs.streeek.lib.domain.repositories.PointsRepository
 import com.bizilabs.streeek.lib.domain.repositories.PreferenceRepository
-import com.bizilabs.streeek.lib.domain.repositories.TeamInvitationRepository
+import com.bizilabs.streeek.lib.domain.repositories.ReminderRepository
+import com.bizilabs.streeek.lib.domain.repositories.TeamInvitationCodeRepository
 import com.bizilabs.streeek.lib.domain.repositories.TeamRepository
 import com.bizilabs.streeek.lib.domain.repositories.UserRepository
 import com.bizilabs.streeek.lib.domain.repositories.VersionRepository
+import com.bizilabs.streeek.lib.domain.repositories.team.TeamMemberInvitationRepository
 import com.bizilabs.streeek.lib.domain.repositories.team.TeamRequestRepository
 import com.bizilabs.streeek.lib.local.LocalModule
 import com.bizilabs.streeek.lib.remote.RemoteModule
@@ -42,6 +46,7 @@ val dataModule =
         single<UserRepository> { UserRepositoryImpl(remote = get(), accountLocalSource = get()) }
         single<AccountRepository> {
             AccountRepositoryImpl(
+                context = get(),
                 remote = get(),
                 local = get(),
                 contributionsLocalSource = get(),
@@ -64,8 +69,8 @@ val dataModule =
                 accountLocalSource = get(),
             )
         }
-        single<TeamInvitationRepository> {
-            TeamInvitationRepositoryImpl(remote = get(), accountLocalSource = get())
+        single<TeamInvitationCodeRepository> {
+            TeamInvitationCodeRepositoryImpl(remote = get(), accountLocalSource = get())
         }
         single<LevelRepository> {
             LevelRepositoryImpl(remoteSource = get(), localSource = get())
@@ -103,5 +108,12 @@ val dataModule =
                 accountLocalSource = get(),
             )
         }
+        single<ReminderRepository> { ReminderRepositoryImpl(localSource = get()) }
         single<NetworkMonitor> { NetworkMonitor(context = get(), repository = get()) }
+        single<TeamMemberInvitationRepository> {
+            TeamMemberInvitationRepositoryImpl(
+                invitationRemoteSource = get(),
+                accountLocalSource = get(),
+            )
+        }
     }

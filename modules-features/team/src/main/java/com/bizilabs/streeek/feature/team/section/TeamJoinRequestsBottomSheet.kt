@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -20,6 +23,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DoneAll
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.Inbox
+import androidx.compose.material.icons.rounded.PeopleAlt
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -33,6 +37,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -49,16 +55,20 @@ import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import coil.compose.AsyncImage
 import com.bizilabs.streeek.feature.team.SelectionAction
+import com.bizilabs.streeek.feature.team.TeamJoinersTab
 import com.bizilabs.streeek.feature.team.TeamRequestAction
 import com.bizilabs.streeek.feature.team.TeamScreenState
+import com.bizilabs.streeek.feature.team.components.InvitedAccountCardComponent
 import com.bizilabs.streeek.lib.common.components.paging.SafiPagingComponent
 import com.bizilabs.streeek.lib.common.models.FetchState
 import com.bizilabs.streeek.lib.design.components.SafiCenteredColumn
+import com.bizilabs.streeek.lib.design.components.SafiCenteredRow
 import com.bizilabs.streeek.lib.design.components.SafiCircularProgressIndicator
 import com.bizilabs.streeek.lib.design.components.SafiInfoSection
 import com.bizilabs.streeek.lib.design.components.SafiTopBarHeader
 import com.bizilabs.streeek.lib.design.helpers.onSuccess
 import com.bizilabs.streeek.lib.design.helpers.success
+import com.bizilabs.streeek.lib.domain.models.team.TeamAccountInvitesDomain
 import com.bizilabs.streeek.lib.domain.models.team.TeamAccountJoinRequestDomain
 import kotlinx.coroutines.launch
 
@@ -66,16 +76,23 @@ import kotlinx.coroutines.launch
 @Composable
 fun TeamJoinRequestsBottomSheet(
     state: TeamScreenState,
-    data: LazyPagingItems<TeamAccountJoinRequestDomain>,
+    requestsData: LazyPagingItems<TeamAccountJoinRequestDomain>,
+    teamAccountsInvites: LazyPagingItems<TeamAccountInvitesDomain>,
     modifier: Modifier = Modifier,
     onDismissSheet: () -> Unit,
     onClickToggleSelectRequest: (TeamAccountJoinRequestDomain) -> Unit,
     onClickProcessSelectedRequests: (Boolean) -> Unit,
     onClickSelectedRequestsSelection: (SelectionAction, List<TeamAccountJoinRequestDomain>) -> Unit,
     onClickProcessRequest: (TeamAccountJoinRequestDomain, TeamRequestAction) -> Unit,
+    onClickWithdraw: (TeamAccountInvitesDomain) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val pagerState =
+        rememberPagerState(
+            initialPage = state.joinerTabs.indexOf(state.joinerTabs.first()),
+        ) { state.joinerTabs.size }
+
     ModalBottomSheet(
         modifier = modifier,
         sheetState = sheetState,
@@ -87,146 +104,173 @@ fun TeamJoinRequestsBottomSheet(
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    navigationIcon = {
-                        IconButton(onClick = onDismissSheet) {
-                            Icon(
-                                imageVector = Icons.Rounded.Close,
-                                contentDescription = "close sheet",
-                            )
-                        }
-                    },
-                    title = {
-                        SafiTopBarHeader(
-                            title = state.team?.team?.name ?: "",
-                            subtitle = "Join Team Requests",
-                        )
-                    },
-                    actions = {
-                        IconButton(
-                            onClick = { data.refresh() },
-                            enabled = data.loadState.refresh is LoadState.NotLoading,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Refresh,
-                                contentDescription = "refresh requests",
-                            )
-                        }
-                    },
+                TeamJoinersSheetHeader(
+                    modifier = Modifier,
+                    state = state,
+                    onDismissSheet = onDismissSheet,
+                    requestsData = requestsData,
+                    invitesData = teamAccountsInvites,
+                    pagerState = pagerState,
                 )
             },
         ) { innerPadding ->
-            Column(
-                modifier =
-                    Modifier
-                        .padding(innerPadding)
-                        .fillMaxSize(),
-            ) {
-                AnimatedVisibility(
-                    modifier = Modifier.fillMaxWidth(),
-                    visible = state.selectedRequestIds.isNotEmpty(),
-                ) {
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(text = "${state.selectedRequestIds.size} selected")
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+            HorizontalPager(
+                modifier = Modifier.fillMaxWidth(),
+                state = pagerState,
+            ) { pageIndex ->
+                when (state.joinerTabs[pageIndex]) {
+                    TeamJoinersTab.REQUESTS -> {
+                        Column(
+                            modifier =
+                                Modifier
+                                    .padding(innerPadding)
+                                    .fillMaxSize(),
                         ) {
-                            TextButton(
-                                onClick = {
-                                    onClickSelectedRequestsSelection(
-                                        SelectionAction.SELECT_ALL,
-                                        data.itemSnapshotList.items,
-                                    )
-                                },
-                                colors =
-                                    ButtonDefaults.textButtonColors(
-                                        contentColor = MaterialTheme.colorScheme.success,
-                                    ),
+                            AnimatedVisibility(
+                                modifier = Modifier.fillMaxWidth(),
+                                visible = state.selectedRequestIds.isNotEmpty(),
                             ) {
-                                Text(text = "Select All (${data.itemCount})")
+                                Row(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text(text = "${state.selectedRequestIds.size} selected")
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        TextButton(
+                                            onClick = {
+                                                onClickSelectedRequestsSelection(
+                                                    SelectionAction.SELECT_ALL,
+                                                    requestsData.itemSnapshotList.items,
+                                                )
+                                            },
+                                            colors =
+                                                ButtonDefaults.textButtonColors(
+                                                    contentColor = MaterialTheme.colorScheme.success,
+                                                ),
+                                        ) {
+                                            Text(text = "Select All (${requestsData.itemCount})")
+                                        }
+                                        TextButton(
+                                            onClick = {
+                                                onClickSelectedRequestsSelection(
+                                                    SelectionAction.CLEAR_ALL,
+                                                    listOf(),
+                                                )
+                                            },
+                                            colors =
+                                                ButtonDefaults.textButtonColors(
+                                                    contentColor = MaterialTheme.colorScheme.error,
+                                                ),
+                                        ) {
+                                            Text(text = "Clear (${state.selectedRequestIds.size})")
+                                        }
+                                    }
+                                }
                             }
-                            TextButton(
-                                onClick = {
-                                    onClickSelectedRequestsSelection(
-                                        SelectionAction.CLEAR_ALL,
-                                        listOf(),
-                                    )
+                            SafiPagingComponent(
+                                data = requestsData,
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f),
+                                refreshEmpty = {
+                                    SafiCenteredColumn(modifier = Modifier.fillMaxWidth()) {
+                                        SafiInfoSection(
+                                            icon = Icons.Rounded.Inbox,
+                                            title = "No New Requests",
+                                            description = "",
+                                        )
+                                    }
                                 },
-                                colors =
-                                    ButtonDefaults.textButtonColors(
-                                        contentColor = MaterialTheme.colorScheme.error,
-                                    ),
                             ) {
-                                Text(text = "Clear (${state.selectedRequestIds.size})")
+                                TeamJoinRequestCard(
+                                    state = state,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    request = it,
+                                    onClickToggleSelectRequest = { onClickToggleSelectRequest(it) },
+                                    onClickProcessRequest = onClickProcessRequest,
+                                )
+                            }
+                            AnimatedVisibility(
+                                visible = state.selectedRequestIds.isNotEmpty(),
+                            ) {
+                                Row(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Button(
+                                        enabled = state.processingMultipleRequestsState == null,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = { onClickProcessSelectedRequests(true) },
+                                        colors =
+                                            ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.success,
+                                                contentColor = MaterialTheme.colorScheme.onSuccess,
+                                            ),
+                                    ) {
+                                        Text(text = "Accept")
+                                    }
+                                    Spacer(modifier = Modifier.padding(horizontal = 16.dp))
+                                    Button(
+                                        enabled = state.processingMultipleRequestsState == null,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = { onClickProcessSelectedRequests(false) },
+                                        colors =
+                                            ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.error,
+                                                contentColor = MaterialTheme.colorScheme.onError,
+                                            ),
+                                    ) {
+                                        Text(text = "Decline")
+                                    }
+                                }
                             }
                         }
                     }
-                }
-                SafiPagingComponent(
-                    data = data,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                    refreshEmpty = {
-                        SafiCenteredColumn(modifier = Modifier.fillMaxWidth()) {
-                            SafiInfoSection(
-                                icon = Icons.Rounded.Inbox,
-                                title = "No New Requests",
-                                description = "",
-                            )
-                        }
-                    },
-                ) {
-                    TeamJoinRequestCard(
-                        state = state,
-                        modifier = Modifier.fillMaxWidth(),
-                        request = it,
-                        onClickToggleSelectRequest = { onClickToggleSelectRequest(it) },
-                        onClickProcessRequest = onClickProcessRequest,
-                    )
-                }
-                AnimatedVisibility(
-                    visible = state.selectedRequestIds.isNotEmpty(),
-                ) {
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Button(
-                            enabled = state.processingMultipleRequestsState == null,
-                            modifier = Modifier.weight(1f),
-                            onClick = { onClickProcessSelectedRequests(true) },
-                            colors =
-                                ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.success,
-                                    contentColor = MaterialTheme.colorScheme.onSuccess,
-                                ),
+
+                    TeamJoinersTab.INVITES -> {
+                        Column(
+                            modifier =
+                                Modifier
+                                    .padding(innerPadding)
+                                    .fillMaxSize(),
                         ) {
-                            Text(text = "Accept")
-                        }
-                        Spacer(modifier = Modifier.padding(horizontal = 16.dp))
-                        Button(
-                            enabled = state.processingMultipleRequestsState == null,
-                            modifier = Modifier.weight(1f),
-                            onClick = { onClickProcessSelectedRequests(false) },
-                            colors =
-                                ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.error,
-                                    contentColor = MaterialTheme.colorScheme.onError,
-                                ),
-                        ) {
-                            Text(text = "Decline")
+                            SafiPagingComponent(
+                                data = teamAccountsInvites,
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f),
+                                refreshEmpty = {
+                                    SafiCenteredColumn(modifier = Modifier.fillMaxWidth()) {
+                                        SafiInfoSection(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            icon = Icons.Rounded.PeopleAlt,
+                                            title = "No Team Invites",
+                                            description = "You have not invited anyone to team yet.",
+                                        )
+                                    }
+                                },
+                            ) {
+                                val isWithdrawn = it.inviteId in state.withdrawnInvitesIds
+
+                                InvitedAccountCardComponent(
+                                    modifier = modifier.fillMaxWidth(),
+                                    isWithdrawn = isWithdrawn,
+                                    accountInvite = it,
+                                    inviteWithdrawalState = state.inviteWithdrawalState,
+                                    onClickWithdraw = onClickWithdraw,
+                                )
+                            }
                         }
                     }
                 }
@@ -389,5 +433,72 @@ fun TeamJoinRequestCard(
             }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TeamJoinersSheetHeader(
+    modifier: Modifier,
+    state: TeamScreenState,
+    onDismissSheet: () -> Unit,
+    requestsData: LazyPagingItems<TeamAccountJoinRequestDomain>,
+    invitesData: LazyPagingItems<TeamAccountInvitesDomain>,
+    pagerState: PagerState,
+) {
+    val coroutineScope = rememberCoroutineScope()
+    Column(modifier = modifier.fillMaxWidth()) {
+        TopAppBar(
+            navigationIcon = {
+                IconButton(onClick = onDismissSheet) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = "close sheet",
+                    )
+                }
+            },
+            title = {
+                SafiTopBarHeader(
+                    title = state.team?.team?.name ?: "",
+                    subtitle = "Join Team Requests and Invited Accounts",
+                )
+            },
+            actions = {
+                IconButton(
+                    onClick = {
+                        requestsData.refresh()
+                        invitesData.refresh()
+                    },
+                    enabled = requestsData.loadState.refresh is LoadState.NotLoading,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Refresh,
+                        contentDescription = "refresh requests",
+                    )
+                }
+            },
+        )
+        TabRow(
+            modifier = Modifier.fillMaxWidth(),
+            selectedTabIndex = pagerState.currentPage,
+        ) {
+            state.joinerTabs.forEachIndexed { index, tab ->
+                val isSelected = pagerState.currentPage == index
+                Tab(
+                    selected = isSelected,
+                    onClick = {
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(state.joinerTabs.indexOf(tab))
+                        }
+                    },
+                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurface.copy(0.25f),
+                ) {
+                    SafiCenteredRow(modifier = Modifier.padding(16.dp)) {
+                        Text(text = tab.label)
+                    }
+                }
+            }
+        }
     }
 }
